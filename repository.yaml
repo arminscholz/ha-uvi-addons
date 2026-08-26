@@ -1,5 +1,5 @@
 # Diese Datei markiert das Repo als Home-Assistant-Add-on-Repository.
 # name/maintainer kannst du frei anpassen, url auf dein echtes Repo setzen.
 name: "Armins Home Assistant Apps"
-url: "https://github.com/<dein-github-name>/<dein-repo-name>"
+url: "https://github.com/arminscholz/ha-uvi-addons"
 maintainer: "Armin"
