@@ -140,20 +140,29 @@ def scrape(page) -> dict:
     return data
 
 
-def run_once(opts: dict) -> dict:
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        try:
-            login(page, opts["uvi_email"], opts["uvi_password"])
-            data = scrape(page)
-        except Exception:
-            if os.environ.get("DEBUG_SCREENSHOT"):
-                page.screenshot(path="/app/debug_screenshot.png", full_page=True)
-            raise
-        finally:
-            browser.close()
-    return data
+def run_once(opts: dict, retries: int = 3, delay: int = 20) -> dict:
+    last_err = None
+    for attempt in range(1, retries + 1):
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            try:
+                login(page, opts["uvi_email"], opts["uvi_password"])
+                data = scrape(page)
+                return data
+            except Exception as e:
+                last_err = e
+                print(f"run_once Versuch {attempt}/{retries} fehlgeschlagen: {e}", flush=True)
+                if os.environ.get("DEBUG_SCREENSHOT"):
+                    try:
+                        page.screenshot(path="/app/debug_screenshot.png", full_page=True)
+                    except Exception:
+                        pass
+            finally:
+                browser.close()
+        if attempt < retries:
+            time.sleep(delay)
+    raise last_err
 
 
 def publish(opts: dict, data: dict) -> None:
