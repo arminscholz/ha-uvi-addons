@@ -72,7 +72,15 @@ def parse_number(text: str) -> float:
     cleaned = cleaned.replace(".", "").replace(",", ".")  # falls Tausenderpunkt vorkommt
     return float(cleaned)
 
+
 def goto_with_retry(page, url: str, retries: int = 5, delay: int = 5) -> None:
+    """Navigiert zu url, mit Wiederholungen bei transienten Netzwerkfehlern.
+
+    Direkt nach dem Start des Add-ons (bzw. des Containers) ist das
+    interne Docker-Netzwerk manchmal noch nicht ganz bereit, was Chromium
+    mit net::ERR_NETWORK_CHANGED quittiert. Ein kurzer Retry behebt das
+    zuverlaessig, ohne dass man das Timing von Hand raten muss.
+    """
     last_err = None
     for attempt in range(1, retries + 1):
         try:
@@ -80,14 +88,17 @@ def goto_with_retry(page, url: str, retries: int = 5, delay: int = 5) -> None:
             return
         except Exception as e:
             last_err = e
-            print(f"goto({url}) fehlgeschlagen (Versuch {attempt}/{retries}): {e}", flush=True)
+            print(
+                f"goto({url}) fehlgeschlagen (Versuch {attempt}/{retries}): {e}",
+                flush=True,
+            )
             if attempt < retries:
                 time.sleep(delay)
     raise last_err
 
 
 def login(page, email: str, password: str) -> None:
-    page.goto_with_retry(page, LOGIN_URL)
+    goto_with_retry(page, LOGIN_URL)
     page.wait_for_load_state("networkidle")
 
     email_field = page.locator(
@@ -107,6 +118,9 @@ def login(page, email: str, password: str) -> None:
 
 def scrape(page) -> dict:
     goto_with_retry(page, CONSUMPTIONS_URL)
+    # Vue-SPA: der Kartencontainer steht sofort im DOM, die eigentlichen
+    # Werte werden aber erst per AJAX nachgeladen. Auf "networkidle"
+    # warten, statt nur auf den (leeren) Container zu pruefen.
     page.wait_for_load_state("networkidle")
     page.wait_for_selector(".bg-white.shadow.rounded-lg")
 
@@ -151,6 +165,11 @@ def scrape(page) -> dict:
 
 
 def run_once(opts: dict, retries: int = 3, delay: int = 20) -> dict:
+    """Fuehrt Login+Scrape aus, mit kompletten Neuversuchen (frischer Browser)
+    bei Fehlern. Manche net::ERR_*-Fehler treten nicht beim ersten goto()
+    auf, sondern erst bei der durch den Login-Klick ausgeloesten
+    Weiterleitung - dagegen hilft nur ein Neustart des ganzen Ablaufs statt
+    eines einzelnen Retries innerhalb von login()/scrape()."""
     last_err = None
     for attempt in range(1, retries + 1):
         with sync_playwright() as p:
@@ -162,7 +181,10 @@ def run_once(opts: dict, retries: int = 3, delay: int = 20) -> dict:
                 return data
             except Exception as e:
                 last_err = e
-                print(f"run_once Versuch {attempt}/{retries} fehlgeschlagen: {e}", flush=True)
+                print(
+                    f"run_once Versuch {attempt}/{retries} fehlgeschlagen: {e}",
+                    flush=True,
+                )
                 if os.environ.get("DEBUG_SCREENSHOT"):
                     try:
                         page.screenshot(path="/app/debug_screenshot.png", full_page=True)
@@ -191,46 +213,4 @@ def publish(opts: dict, data: dict) -> None:
             "name": name,
             "unique_id": object_id,
             "object_id": object_id,
-            "state_topic": state_topic,
-            "icon": icon,
-            "unit_of_measurement": unit,
-            "state_class": state_class,
-            "device": DEVICE,
-        }
-        client.publish(config_topic, json.dumps(config), retain=True)
-        if key in data:
-            client.publish(state_topic, data[key], retain=True)
-
-    client.publish(
-        f"{STATE_PREFIX}/last_update",
-        datetime.now(timezone.utc).isoformat(),
-        retain=True,
-    )
-    time.sleep(1)  # kurz warten, damit publish() vor dem Trennen noch rausgeht
-    client.loop_stop()
-    client.disconnect()
-
-
-def main() -> None:
-    while True:
-        opts = load_options()
-        interval_hours = int(opts.get("run_interval_hours", 24) or 24)
-        try:
-            print(f"[{datetime.now().isoformat()}] Starte Abfrage...", flush=True)
-            data = run_once(opts)
-            print(f"[{datetime.now().isoformat()}] Ausgelesen: {data}", flush=True)
-            if not data:
-                print("WARNUNG: keine Werte gefunden - Login/Selektoren pruefen.", flush=True)
-            else:
-                publish(opts, data)
-                print(f"[{datetime.now().isoformat()}] An MQTT veroeffentlicht.", flush=True)
-        except Exception:
-            print("FEHLER bei Abfrage/Veroeffentlichung:", flush=True)
-            traceback.print_exc(file=sys.stdout)
-
-        print(f"Warte {interval_hours}h bis zum naechsten Lauf...", flush=True)
-        time.sleep(interval_hours * 3600)
-
-
-if __name__ == "__main__":
-    main()
+            "state_topic":
