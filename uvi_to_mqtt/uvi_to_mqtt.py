@@ -72,6 +72,19 @@ def parse_number(text: str) -> float:
     cleaned = cleaned.replace(".", "").replace(",", ".")  # falls Tausenderpunkt vorkommt
     return float(cleaned)
 
+def goto_with_retry(page, url: str, retries: int = 5, delay: int = 5) -> None:
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            page.goto(url, wait_until="load", timeout=30000)
+            return
+        except Exception as e:
+            last_err = e
+            print(f"goto({url}) fehlgeschlagen (Versuch {attempt}/{retries}): {e}", flush=True)
+            if attempt < retries:
+                time.sleep(delay)
+    raise last_err
+
 
 def login(page, email: str, password: str) -> None:
     page.goto(LOGIN_URL)
