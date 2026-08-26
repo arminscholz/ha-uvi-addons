@@ -87,7 +87,7 @@ def goto_with_retry(page, url: str, retries: int = 5, delay: int = 5) -> None:
 
 
 def login(page, email: str, password: str) -> None:
-    page.goto(LOGIN_URL)
+    page.goto_with_retry(page, LOGIN_URL)
     page.wait_for_load_state("networkidle")
 
     email_field = page.locator(
@@ -106,7 +106,7 @@ def login(page, email: str, password: str) -> None:
 
 
 def scrape(page) -> dict:
-    page.goto(CONSUMPTIONS_URL)
+    page.goto_with_retry(page, CONSUMPTIONS_URL)
     page.wait_for_selector(".bg-white.shadow.rounded-lg")
 
     data: dict = {}
