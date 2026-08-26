@@ -106,22 +106,32 @@ def login(page, email: str, password: str) -> None:
 
 
 def scrape(page) -> dict:
-    page.goto_with_retry(page, CONSUMPTIONS_URL)
+    goto_with_retry(page, CONSUMPTIONS_URL)
+    page.wait_for_load_state("networkidle")
     page.wait_for_selector(".bg-white.shadow.rounded-lg")
 
     data: dict = {}
     cards = page.locator(".bg-white.shadow.rounded-lg")
-    for i in range(cards.count()):
+    count = cards.count()
+    print(f"scrape(): {count} Karten mit '.bg-white.shadow.rounded-lg' gefunden", flush=True)
+    for i in range(count):
         card = cards.nth(i)
         heading_loc = card.locator("h1").first
         if heading_loc.count() == 0:
+            print(f"  Karte {i}: keine <h1> gefunden. HTML: {card.inner_html()[:500]}", flush=True)
             continue
         heading = heading_loc.inner_text().strip()
 
         value_loc = card.locator(".text-4xl.font-bold").first
         if value_loc.count() == 0:
+            print(
+                f"  Karte {i} ('{heading}'): kein Wert-Element (.text-4xl.font-bold) gefunden. "
+                f"HTML: {card.inner_html()[:1000]}",
+                flush=True,
+            )
             continue
         value = parse_number(value_loc.inner_text())
+        print(f"  Karte {i} ('{heading}'): Wert = {value}", flush=True)
 
         if "Wärme" in heading:
             data["waerme"] = value
