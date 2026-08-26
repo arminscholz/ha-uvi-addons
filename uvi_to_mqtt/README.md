@@ -22,8 +22,16 @@ sie automatisch als Sensoren in Home Assistant erscheinen.
    `mqtt_host` reicht meist der Standardwert `core-mosquitto` (Name des
    offiziellen Mosquitto-Broker-Add-ons im internen Netz), dazu
    `mqtt_username`/`mqtt_password` von deinem MQTT-Broker eintragen.
-   `run_interval_hours` steuert, wie oft neu abgefragt wird (Default: 24 –
-   das Portal aktualisiert offenbar nur monatlich, häufiger bringt nichts).
+
+   Das Portal zeigt die fertigen Werte immer erst für den **Vormonat** an,
+   daher fragt das Add-on gezielt einmal im Monat ab, statt stur alle X
+   Stunden zu pollen:
+   - `run_day_of_month` (Default: 1) – an welchem Kalendertag im Monat.
+   - `run_hour` (Default: 6) – zu welcher Uhrzeit (0–23).
+   - `timezone` (Default: `Europe/Berlin`) – Zeitzone für die obigen Angaben.
+   - `run_on_start` (Default: an) – zusätzlich einmal sofort beim
+     (Neu-)Start des Add-ons abfragen, praktisch zum Testen der
+     Zugangsdaten, ohne bis zum nächsten Monatsersten warten zu müssen.
 5. Speichern, dann Tab "Info" → Start. Im Tab "Log" siehst du, ob Login und
    MQTT-Veröffentlichung geklappt haben.
 
@@ -38,6 +46,27 @@ Nach dem ersten erfolgreichen Lauf tauchen vier neue Sensoren auf:
 
 Zu finden auch unter Settings → Devices & Services → MQTT → Gerät
 "UVI Verbrauch Simbach".
+
+## Ins Energie-Dashboard eintragen
+
+Alle vier Sensoren haben jetzt das passende `device_class`-Attribut und
+lassen sich unter Settings → Dashboards → Energie eintragen:
+
+- **Gas hinzufügen** (kWh) → `sensor.uvi_waerme` und `sensor.uvi_warmwasser_energie`
+  (beides Wärme aus der Gastherme).
+- **Wasser hinzufügen** (m³) → `sensor.uvi_warmwasser_menge` und `sensor.uvi_kaltwasser`.
+
+Ein Punkt zum Wissen: Das Portal zeigt die Werte immer erst für den
+**Vormonat**, aktualisiert wird bei uns am 1. des Monats. Home Assistant
+verbucht diese Aktualisierung technisch im Moment des Abrufs – die
+Monatsbalken im Energie-Dashboard erscheinen dadurch einen Monat
+"verspätet" (der im September ankommende Wert steht dort als
+September-Balken, obwohl er eigentlich Augusts Verbrauch ist). Die
+Jahressumme bleibt davon unberührt, nur die Monatszuordnung ist verschoben.
+Eine exakte Rückdatierung wäre über `recorder.import_statistics` möglich,
+birgt aber ein reales Risiko doppelt gezählter Werte, wenn sie nicht sehr
+sorgfältig gegen die eigene Instanz getestet wird – aktuell bewusst nicht
+eingebaut.
 
 ## Falls der Login fehlschlägt
 

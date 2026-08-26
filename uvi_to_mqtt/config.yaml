@@ -1,5 +1,5 @@
 name: "UVI Verbrauch -> MQTT"
-version: "1.1.0"
+version: "2.1.0"
 slug: "uvi_to_mqtt"
 description: "Liest Heizkosten/Warmwasser/Kaltwasser aus dem Immobilien-Hasler-Mieterportal (UVI) und veröffentlicht sie per MQTT Discovery für Home Assistant."
 arch:
@@ -14,7 +14,10 @@ options:
   mqtt_port: 1883
   mqtt_username: ""
   mqtt_password: ""
-  run_interval_hours: 24
+  run_day_of_month: 1
+  run_hour: 6
+  timezone: "Europe/Berlin"
+  run_on_start: true
 schema:
   uvi_email: str
   uvi_password: password
@@ -22,4 +25,7 @@ schema:
   mqtt_port: int
   mqtt_username: str?
   mqtt_password: password?
-  run_interval_hours: int
+  run_day_of_month: int(1,28)
+  run_hour: int(0,23)
+  timezone: str
+  run_on_start: bool
