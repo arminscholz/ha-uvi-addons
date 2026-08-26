@@ -213,4 +213,46 @@ def publish(opts: dict, data: dict) -> None:
             "name": name,
             "unique_id": object_id,
             "object_id": object_id,
-            "state_topic":
+            "state_topic": state_topic,
+            "icon": icon,
+            "unit_of_measurement": unit,
+            "state_class": state_class,
+            "device": DEVICE,
+        }
+        client.publish(config_topic, json.dumps(config), retain=True)
+        if key in data:
+            client.publish(state_topic, data[key], retain=True)
+
+    client.publish(
+        f"{STATE_PREFIX}/last_update",
+        datetime.now(timezone.utc).isoformat(),
+        retain=True,
+    )
+    time.sleep(1)  # kurz warten, damit publish() vor dem Trennen noch rausgeht
+    client.loop_stop()
+    client.disconnect()
+
+
+def main() -> None:
+    while True:
+        opts = load_options()
+        interval_hours = int(opts.get("run_interval_hours", 24) or 24)
+        try:
+            print(f"[{datetime.now().isoformat()}] Starte Abfrage...", flush=True)
+            data = run_once(opts)
+            print(f"[{datetime.now().isoformat()}] Ausgelesen: {data}", flush=True)
+            if not data:
+                print("WARNUNG: keine Werte gefunden - Login/Selektoren pruefen.", flush=True)
+            else:
+                publish(opts, data)
+                print(f"[{datetime.now().isoformat()}] An MQTT veroeffentlicht.", flush=True)
+        except Exception:
+            print("FEHLER bei Abfrage/Veroeffentlichung:", flush=True)
+            traceback.print_exc(file=sys.stdout)
+
+        print(f"Warte {interval_hours}h bis zum naechsten Lauf...", flush=True)
+        time.sleep(interval_hours * 3600)
+
+
+if __name__ == "__main__":
+    main()
