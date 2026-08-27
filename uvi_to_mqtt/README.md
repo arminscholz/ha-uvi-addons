@@ -57,16 +57,34 @@ lassen sich unter Settings → Dashboards → Energie eintragen:
 - **Wasser hinzufügen** (m³) → `sensor.uvi_warmwasser_menge` und `sensor.uvi_kaltwasser`.
 
 Ein Punkt zum Wissen: Das Portal zeigt die Werte immer erst für den
-**Vormonat**, aktualisiert wird bei uns am 1. des Monats. Home Assistant
-verbucht diese Aktualisierung technisch im Moment des Abrufs – die
-Monatsbalken im Energie-Dashboard erscheinen dadurch einen Monat
-"verspätet" (der im September ankommende Wert steht dort als
-September-Balken, obwohl er eigentlich Augusts Verbrauch ist). Die
-Jahressumme bleibt davon unberührt, nur die Monatszuordnung ist verschoben.
-Eine exakte Rückdatierung wäre über `recorder.import_statistics` möglich,
-birgt aber ein reales Risiko doppelt gezählter Werte, wenn sie nicht sehr
-sorgfältig gegen die eigene Instanz getestet wird – aktuell bewusst nicht
-eingebaut.
+**Vormonat**, aktualisiert wird bei uns am 1. des Monats. Wenn du die vier
+`sensor.uvi_*`-Entities direkt einträgst, verbucht Home Assistant die
+Aktualisierung technisch im Moment des Abrufs – die Monatsbalken im
+Energie-Dashboard erscheinen dadurch einen Monat "verspätet" (der im
+September ankommende Wert steht dort als September-Balken, obwohl er
+eigentlich Augusts Verbrauch ist). Die Jahressumme bleibt davon unberührt,
+nur die Monatszuordnung ist verschoben.
+
+### Alternative: rückdatierte externe Statistik (exakte Monatszuordnung)
+
+Seit Version 3.0.0 schreibt das Add-on zusätzlich vier **externe
+Statistiken** (`uvi:waerme`, `uvi:warmwasser_menge`, `uvi:warmwasser_energie`,
+`uvi:kaltwasser`) über `recorder.import_statistics`, die exakt auf den
+echten Verbrauchsmonat datiert sind (Sept.-Abruf → Eintrag im August).
+Diese sind komplett getrennt von den normalen `sensor.uvi_*`-Sensoren, es
+gibt also keine Doppelzählung. Dafür braucht das Add-on Zugriff auf die
+Home-Assistant-API (`homeassistant_api: true` in `config.yaml`, dafür
+einmal neu installieren, damit der `SUPERVISOR_TOKEN` gesetzt wird).
+
+Nach dem ersten erfolgreichen Lauf: Settings → Dashboards → Energie →
+"Gas hinzufügen" bzw. "Wasser hinzufügen" → in der Auswahlliste nach
+"UVI" suchen. Falls dort **nichts** auftaucht: Home Assistant bietet
+externe (nicht-Entity-gebundene) Statistiken in eurer Version
+möglicherweise nicht im Auswahldialog an – dann einfach stattdessen die
+normalen `sensor.uvi_*`-Entities eintragen (siehe oben, mit der
+1-Monats-Verschiebung). Schick mir in dem Fall kurz Bescheid, dann schauen
+wir nach Alternativen. Im Add-on-Log siehst du bei jedem Lauf, ob der
+Schreibvorgang geklappt hat ("Externe Statistik geschrieben: ...").
 
 ## Falls der Login fehlschlägt
 

@@ -1,5 +1,5 @@
 name: "UVI Verbrauch -> MQTT"
-version: "2.1.0"
+version: "3.0.0"
 slug: "uvi_to_mqtt"
 description: "Liest Heizkosten/Warmwasser/Kaltwasser aus dem Immobilien-Hasler-Mieterportal (UVI) und veröffentlicht sie per MQTT Discovery für Home Assistant."
 arch:
@@ -7,6 +7,7 @@ arch:
 startup: application
 boot: auto
 init: false
+homeassistant_api: true
 options:
   uvi_email: ""
   uvi_password: ""
